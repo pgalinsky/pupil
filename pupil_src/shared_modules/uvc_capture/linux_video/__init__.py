@@ -32,6 +32,12 @@ class Camera_Capture(object):
             self.controls['focus_auto'].set_val(0)
         except KeyError:
             pass
+        try:
+            # exposure_auto_priority == 1
+            # leads to reduced framerates under low light and corrupt timestamps.
+            self.controls['exposure_auto_priority'].set_val(0)
+        except KeyError:
+            pass
         self.timebase = timebase
         self.use_hw_ts = self.check_hw_ts_support()
 
@@ -46,7 +52,7 @@ class Camera_Capture(object):
     def check_hw_ts_support(self):
         # hw timestamping:
         # v4l2 supports Sart of Exposure hardware timestamping ofr UVC Capture devices
-        # these HW timestamps are excellent referece times and 
+        # these HW timestamps are excellent referece times and
         # prefferec over softwaretimestamp denoting the avaibleilt of frames to the user.
         # however not all uvc cameras report valid hw timestamps, notably microsoft hd-6000
         # becasue all used devices need to properly implement hw timestamping for it to be usefull
@@ -90,6 +96,10 @@ class Camera_Capture(object):
             self.controls['focus_auto'].set_val(0)
         except KeyError:
             pass
+        try:
+            self.controls['exposure_auto_priority'].set_val(0)
+        except KeyError:
+            pass
 
         self.use_hw_ts = self.check_hw_ts_support()
 
@@ -119,8 +129,10 @@ class Camera_Capture(object):
 
         self.bar.add_var('framerate', vtype = atb.enum('framerate',self.capture.rates_menu), getter = lambda:self.capture.current_rate_idx, setter=self.capture.set_rate_idx )
         self.bar.add_var('hardware timestamps',vtype=atb.TW_TYPE_BOOL8,getter=lambda:self.use_hw_ts)
+
         sorted_controls = [c for c in self.controls.itervalues()]
         sorted_controls.sort(key=lambda c: c.order)
+
 
         for control in sorted_controls:
             name = control.atb_name
@@ -145,7 +157,9 @@ class Camera_Capture(object):
                 pass
             if control.flags == "inactive":
                 pass
-                # self.bar.define(definition='readonly=1',varname=control.name)
+            if control.name == 'exposure_auto_priority':
+                # the controll should always be off. we set it to 0 on init (see above)
+                self.bar.define(definition='readonly=1',varname=control.name)
 
         self.bar.add_button("refresh",self.controls.update_from_device)
         self.bar.add_button("load defaults",self.controls.load_defaults)
